@@ -1,2 +1,2 @@
-# alphazero-cc
-AlphaZero implementation with tf. Trying to teach it Chinese Checkers, so don't expect too much generalization.
+# AlphaZero for Chinese Checkers
+AlphaZero implementation with tf. The goal is to train it to play Chinese Checkers, so the code may not be in the most general form.
