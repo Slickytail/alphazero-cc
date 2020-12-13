@@ -2,7 +2,7 @@ from search import Node
 import numpy as np
 from checkers import CheckersGame, FULL_BOARD, Move
 from itertools import product
-from typing import List
+from typing import List, Tuple
 
 Action = int
 class Game(object):
@@ -28,12 +28,12 @@ class Game(object):
                 self.game.move(*action, validate=False)
         self.child_visits = []
 
-    def terminal(self):
+    def terminal(self) -> bool:
         return self.game.winner is not None
 
-    def terminal_value(self, player):
+    def terminal_value(self, player) -> float:
         # Might need to be in range [0, 1] instead...
-        return 1 if self.game.winner == player else -1
+        return 1.0 if self.game.winner == player else -1.0
 
     def legal_actions(self) -> np.array:
         actions = np.zeros(Game.NUM_ACTIONS)
@@ -49,7 +49,7 @@ class Game(object):
         # Trust that the move was validated already
         self.game.move(*move, validate=False)
 
-    def clone(self):
+    def clone(self) -> Game:
         return Game(list(self.history), self.game.clone())
 
     def store_search_statistics(self, root: Node):
@@ -59,7 +59,7 @@ class Game(object):
             visit_probs[action] = child.visit_count / total_visits
         self.child_visits.append(visit_probs)
 
-    def make_image(self, state_index: int):
+    def make_image(self, state_index: int) -> np.array:
         board = self.game._board.copy()
         turn = self.game.player_turn
         # TODO: Check for off-by-one error here.
@@ -102,7 +102,7 @@ class Game(object):
         return np.moveaxis(planes, 0, -1)
 
 
-    def make_target(self, state_index: int):
+    def make_target(self, state_index: int) -> Tuple[float, np.array]:
         # Directly copied from pseudocode
         # Need to check to make sure we're getting the right index ...
         return (self.terminal_value(state_index % 2),
