@@ -4,8 +4,7 @@ from checkers import CheckersGame, FULL_BOARD, Move
 from itertools import product
 from typing import List
 
-# Consider storing these in an array or something instead
-
+Action = int
 class Game(object):
     """
     Represents a single game, all its history, and any information
@@ -33,10 +32,12 @@ class Game(object):
         return self.game.winner is not None
 
     def terminal_value(self, player):
+        # Might need to be in range [0, 1] instead...
         return 1 if self.game.winner == player else -1
 
-    def legal_actions(self) -> List[int]:
-        actions = [move_to_index[m] for m in self.game.get_legal(self.game.player_turn)]
+    def legal_actions(self) -> np.array:
+        actions = np.zeros(Game.NUM_ACTIONS)
+        np.put(actions, [move_to_index[m] for m in self.game.get_legal(self.game.player_turn)], 1.0)
         return actions
 
     def apply(self, action: int):
