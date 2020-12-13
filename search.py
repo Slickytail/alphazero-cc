@@ -27,6 +27,7 @@ class Node(object):
 def mcts(game: Game, network, config: Config):
     """
     Monte-Carlo tree search.
+    Single threaded.
     """
     root = Node(0)
     evaluate(root, game, network)
@@ -43,8 +44,18 @@ def mcts(game: Game, network, config: Config):
             action, node = select_child(node, config)
             scratch_game.apply(action)
             search_path.append(node)
-        
-        # Potentially multithread and then batch these states for the GPU?
+       
+        # To improve performance (GPU batching)
+        # In theory you could also 
+        # Run the loop only up to this point B times (probably 2^n)
+        # And on each run just save the search path and the game's image, player, and legal actions
+        # save all of these into a list.
+        # Then stack up the B images and the B arrays of legal actions.
+        # Send the images to the neural network.
+        # Then you can multiply the stack of policy_logits by the legal_actions arrays very fast
+        # do a softmax (be sure to get the axis summation right)
+        # and then finally unstack them, create children, etc.
+
         # Use the neural network to get suggested priors and value
         value = evaluate(node, scratch_game, network)
         # Store the NN's estimation in the search tree
@@ -58,7 +69,7 @@ def evaluate(node: Node, game: Game, evaluator) -> float:
     Use a neural network evaluator to compute a suggested policy at a node.
     """
     # Let's make sure that passing a negative int to game.make_image works
-    value, policy_logits = evaluator(game.make_image(-1))
+    value, policy_logits = evaluator.predict(game.make_image(-1))
 
     # Record the policy prediction in the children
     node.to_play = game.to_play()
@@ -80,7 +91,7 @@ def add_exploration_noise(node: Node, config: Config):
     Add noise to the priors of a node's children.
     """
     actions = node.children.keys()
-    noise = np.random.gamma(config.root_alpha, 1, len(actions))
+    noise = config.rng.gamma(config.root_alpha, 1, len(actions))
     frac = config.root_noise_scale
     for a, n in zip(actions, noise):
         node.children[a].prior = node.children[a].prior * (1 - frac) + n * frac

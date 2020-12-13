@@ -18,15 +18,23 @@ class Config:
         self.pb_c_init = 1.25
 
         ### Training
-        self.training_steps = int(1e4)
-        self.checkpoint_interval = int(1e2)
-        # What does this do?
-        self.window_size = int(1e6)
-        self.batch_size = 64
+        self.training_steps = int(7e4)
+        self.games_per_step = int(5e2)
+        self.batches_per_step = 10
 
-        self.regularization = 1e-4
-        self.momentum = 0.9
-        self.lr_base = 1e-1
+        self.checkpoint_interval = int(1e3)
+        self.window_size = int(1e4)
+        self.batch_size = 128
+
+        # Model saving
+        self.checkpoint_dir = "checkpoints"
+        self.checkpoint_fname = "chinese-checkers-training-{epoch:05d}.ckpt"
+
+        # Coefficient for L2 regularization
+        self.l2_decay = 1e-4
+        self.lr_init = 2e-1
+        self.lr_multiplier = 0.5
+        self.lr_steps = 3e3
 
         ### RNG
         self.seed = 3257840388504953787
