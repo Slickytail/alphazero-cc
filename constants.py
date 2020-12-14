@@ -1,11 +1,13 @@
 import numpy as np
+import datetime
 
 class Config:
     def __init__(self):
         ### Self-Play
+        self.search_batch_size = 8
         self.num_sampling_moves = 20
         self.max_moves = 400
-        self.num_simulations = 100
+        self.num_simulations = 128
 
         # Root exploration noise
         # Figure out average number of legal moves in chinese checkers
@@ -19,7 +21,7 @@ class Config:
 
         ### Training
         self.training_steps = int(7e4)
-        self.games_per_step = int(5e2)
+        self.games_per_step = 100
         self.batches_per_step = 10
 
         self.checkpoint_interval = int(1e3)
@@ -29,6 +31,10 @@ class Config:
         # Model saving
         self.checkpoint_dir = "checkpoints"
         self.checkpoint_fname = "chinese-checkers-training-{epoch:05d}.ckpt"
+
+        # Logging
+        self.log_dir = "logs"
+        self.timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
         # Coefficient for L2 regularization
         self.l2_decay = 1e-4

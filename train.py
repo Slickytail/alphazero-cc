@@ -50,16 +50,22 @@ def train(config: Config):
     # Make a directory to save callbacks in
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     checkpoint_callback = keras.callbacks.ModelCheckpoint(
-        os.path.join(config.checkpoint_dir, config.checkpoint_fname),
-        save_freq = config.checkpoint_interval
+            os.path.join(config.checkpoint_dir, config.checkpoint_fname),
+            save_freq = config.checkpoint_interval
         )
+    # Also use Tensorboard
+    tensorboard_callback = keras.callbacks.TensorBoard(
+            log_dir=f"{config.log_dir}/fit/{config.timestamp}",
+            histogram_freq=1
+        )
+
     # Single threaded version.
     for i in range(config.training_steps):
         # Self-play some games
         for _ in range(config.games_per_step):
             replays.save_game(self_play(model, config))
         # Might want to create a better training loop than this
-        model.fit(replays, callbacks = [checkpoint_callback],
+        model.fit(replays, callbacks = [checkpoint_callback, tensorboard_callback],
                 steps_per_epoch=config.batches_per_step,
                 initial_epoch = i, epochs = i+1)
 
