@@ -11,7 +11,6 @@ class Game(object):
     """
 
     NUM_ACTIONS = 121**2
-    ACTION_SHAPE = (NUM_ACTIONS)
     INPUT_SHAPE = (17, 17, 8)
     # The board is 17x17=289 squares.
     # If we were to make the output be layered (rather than flat),

@@ -27,78 +27,95 @@ class Node(object):
 def mcts(game: Game, network, config: Config):
     """
     Monte-Carlo tree search.
-    Single threaded.
     """
+    # Create the root node
     root = Node(0)
-    evaluate(root, game, network)
-    add_exploration_noise(root, config)
+    # Tell it who's playing
+    root.to_play = game.to_play()
+    # Fill in the probabilities of its children according to the current NN
+    _, root_policy = evaluate(network,
+            np.expand_dims(game.make_image(-1), 0),
+            np.expand_dims(game.legal_actions(), 0))
+    # Add noise to the priors first!
+    root_policy = add_exploration_noise(root_policy[0], config)
+    create_children(root, root_policy)
 
     # Do a number of playouts
-    for _ in range(config.num_simulations):
-        node = root
-        # Create a copy of the game to try moves in 
-        scratch_game = game.clone()
-        search_path = [node]
-        # Randomly pick moves until we reach the end of the known search tree
-        while node.expanded():
-            action, node = select_child(node, config)
-            scratch_game.apply(action)
-            search_path.append(node)
-       
-        # To improve performance (GPU batching)
-        # In theory you could also 
-        # Run the loop only up to this point B times (probably 2^n)
-        # And on each run just save the search path and the game's image, player, and legal actions
-        # save all of these into a list.
-        # Then stack up the B images and the B arrays of legal actions.
-        # Send the images to the neural network.
-        # Then you can multiply the stack of policy_logits by the legal_actions arrays very fast
-        # do a softmax (be sure to get the axis summation right)
-        # and then finally unstack them, create children, etc.
+    for _ in range(config.num_simulations // config.search_batch_size):
+        # Initialize an empty stack of searches
+        actions = np.empty((config.search_batch_size, Game.NUM_ACTIONS), dtype=np.float32)
+        images = np.empty((config.search_batch_size, *Game.INPUT_SHAPE), dtype=np.float32)
+        search_paths = []
+        
+        # fill up a batch of searches.
+        # this could be done in parallel, but because of the overhead of creating threads/processes
+        # it might actually be slower to do it naively -- ie, without keeping the threads long-term
+        for i in range(config.search_batch_size):
+            node = root
+            # Create a copy of the game to try moves in 
+            scratch_game = game.clone()
+            search_path = [node]
+            # Randomly pick moves until we reach the end of the known search tree
+            while node.expanded():
+                action, node = select_child(node, config)
+                scratch_game.apply(action)
+                search_path.append(node)
+            # TODO: Add edge case: what if the game is won?
+            node.to_play = scratch_game.to_play()
 
+            images[i,:,:,:] = scratch_game.make_image(-1)
+            actions[i,:] = scratch_game.legal_actions()
+            search_paths.append(search_path)
+       
         # Use the neural network to get suggested priors and value
-        value = evaluate(node, scratch_game, network)
+        values, policies = evaluate(network, images, actions)
         # Store the NN's estimation in the search tree
-        backpropagate(search_path, value, scratch_game.to_play())
+        for i in range(config.search_batch_size):
+            # Add children to the node
+            path = search_paths[i]
+            node = path[-1]
+            create_children(node, policies[i])
+            # Backpropagate the value
+            to_play = node.to_play
+            value = values[i]
+            for node in path:
+                node.value_sum += value if node.to_play == to_play else -value
+                node.visit_count += 1
     # Return the chosen action as well as the search tree.
     return select_action(game, root, config), root
 
 
-def evaluate(node: Node, game: Game, evaluator) -> float:
+def evaluate(evaluator, images, actions):
     """
     Use a neural network evaluator to compute a suggested policy at a node.
     """
     # Let's make sure that passing a negative int to game.make_image works
-    value, policy_logits = evaluator(np.stack([game.make_image(-1)]), training=False)
-    # These are both tensors with first dimension = batches
-    # So we want to take the first element of each
-    # Plus, value will have shape (B, 1) so we want [0, 0]
-    value = value[0,0]
-    policy_logits = policy_logits[0,:]
-    # Record the policy prediction in the children
-    node.to_play = game.to_play()
+    value, policy_logits = evaluator(images, training=False)
     # Zero out the illegal actions
-    policy = np.exp(policy_logits * game.legal_actions())
+    policy = np.exp(policy_logits * actions)
     # Renormalize the probabilities
-    policy_sum = np.sum(policy)
+    # policies has shape (batches, actions) and we want to sum over actions
+    policy_sum = np.sum(policy, axis=1, keepdims=True)
     policy = policy / policy_sum
-    # Add children to the node
-    for (i, p) in enumerate(policy):
+    # Return the values and policies
+    return value[:,0], policy
+
+def create_children(node, priors):
+    """
+    Given a list of prior probabilities, create children for a node
+    """
+    for (a, p) in enumerate(priors):
+        # p is only set to 0 if the move is actually illegal
         if p != 0.0:
-            node.children[i] = Node(p)
-    # Return the position's value
-    return value
+            node.children[a] = Node(p)
 
-
-def add_exploration_noise(node: Node, config: Config):
+def add_exploration_noise(priors: np.array, config: Config) -> np.array:
     """
-    Add noise to the priors of a node's children.
+    Add noise to an array of priors
     """
-    actions = node.children.keys()
-    noise = config.rng.gamma(config.root_alpha, 1, len(actions))
+    noise = config.rng.gamma(config.root_alpha, 1, priors.shape)
     frac = config.root_noise_scale
-    for a, n in zip(actions, noise):
-        node.children[a].prior = node.children[a].prior * (1 - frac) + n * frac
+    return priors * (1 - frac) + noise * frac
 
 def select_child(node: Node, config: Config) -> Tuple[Action, Node]:
     """
@@ -122,13 +139,6 @@ def select_child(node: Node, config: Config) -> Tuple[Action, Node]:
     best_action = Action(children[np.argmax(ucb_score),0])
     return (best_action, node.children[best_action])
 
-def backpropagate(search_path: List[Node], value: float, to_play: int):
-    """
-    Given a value at the end of a search path, store that value in the path.
-    """
-    for node in search_path:
-        node.value_sum += value if node.to_play == to_play else -value
-        node.visit_count += 1
 
 def select_action(game: Game, root: Node, config: Config) -> Action:
     """
