@@ -61,6 +61,7 @@ def train(config: Config):
     for i in range(config.training_steps // config.batches_per_step):
         # Self-play some games
         progbar = keras.utils.Progbar(config.games_per_step)
+        progbar.update(0)
         for g in range(config.games_per_step):
             replays.save_game(self_play(model, config))
             progbar.update(g+1)

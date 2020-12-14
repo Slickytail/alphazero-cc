@@ -72,6 +72,7 @@ def mcts(game: Game, network, config: Config):
                 search_paths.append(None)
                 # We can leave the image, we don't care about it
                 # And we can leave the actions as ones -- nothing is going to be done with it
+            else:
                 images[i,:,:,:] = scratch_game.make_image(-1)
                 actions[i,:] = scratch_game.legal_actions()
                 search_paths.append(search_path)
@@ -107,7 +108,7 @@ def create_children(node, priors):
     Given a list of prior probabilities, create children for a node
     """
 
-    for a in np.argwhere(priors):
+    for a in np.flatnonzero(priors):
         # p is only set to 0 if the move is actually illegal
         node.children[a] = Node(priors[a])
 
