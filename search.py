@@ -4,6 +4,7 @@ import math
 
 from game_az_wrapper import Game, Action
 from constants import Config
+from util import softmax, softmask
 
 class Node(object):
     """
@@ -44,8 +45,9 @@ def mcts(game: Game, network, config: Config):
     # Do a number of playouts
     for _ in range(config.num_simulations // config.search_batch_size):
         # Initialize an empty stack of searches
-        actions = np.empty((config.search_batch_size, Game.NUM_ACTIONS), dtype=np.float32)
-        images = np.empty((config.search_batch_size, *Game.INPUT_SHAPE), dtype=np.float32)
+        # Should be OK to change these to np.empty...
+        actions = np.zeros((config.search_batch_size, Game.NUM_ACTIONS), dtype=np.float32)
+        images = np.zeros((config.search_batch_size, *Game.INPUT_SHAPE), dtype=np.float32)
         search_paths = []
         terminal = []
         
@@ -88,19 +90,14 @@ def mcts(game: Game, network, config: Config):
     # Return the chosen action as well as the search tree.
     return select_action(game, root, config), root
 
-
 def evaluate(evaluator, images, actions):
     """
     Use a neural network evaluator to compute a suggested policy at a node.
     """
     # Let's make sure that passing a negative int to game.make_image works
     value, policy_logits = evaluator(images, training=False)
-    # Zero out the illegal actions
-    policy = np.exp(policy_logits * actions)
-    # Renormalize the probabilities
-    # policies has shape (batches, actions) and we want to sum over actions
-    policy_sum = np.sum(policy, axis=1, keepdims=True)
-    policy = policy / policy_sum
+    # Zero out the illegal actions and then softmax
+    policy = softmask(policy_logits, actions, 1)
     # Return the values and policies
     return value[:,0], policy
 
@@ -150,12 +147,12 @@ def select_action(game: Game, root: Node, config: Config) -> Action:
     visit_counts = [(child.visit_count, i) for (i, child) in root.children.items()]
     if len(game.history) < config.num_sampling_moves:
         # Softmax sampling
-        probs = np.exp([c for (c, _) in visit_counts])
-        action = config.rng.choice([i for (_, i) in visit_counts], p=probs/np.sum(probs))
+        probs = softmax(np.array([c for (c, _) in visit_counts]), 0)
+        action = config.rng.choice([i for (_, i) in visit_counts], p=probs)
     else:
         _, action = max(visit_counts)
     return action
 
 # Note to self: exploiting symmetry (ie, augmenting training data by flipping) will make training much faster when measured in real-time
 # Need to find out: does AlphaZero flip the board to be from the current player's position?
-
+np.seterr(all='raise')

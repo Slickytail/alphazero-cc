@@ -7,7 +7,7 @@ class Config:
         self.search_batch_size = 8
         self.num_sampling_moves = 15
         self.max_moves = 200
-        self.num_simulations = 50
+        self.num_simulations = 16
 
         # Root exploration noise
         # Figure out average number of legal moves in chinese checkers
@@ -17,16 +17,16 @@ class Config:
 
         ### Training
         self.training_steps = int(1e3)
-        self.games_per_step = 20
-        self.batches_per_step = 80
+        self.games_per_step = 4
+        self.batches_per_step = 8
 
-        self.checkpoint_interval = int(1e2)
+        self.checkpoint_interval = 50
         self.window_size = int(1e3)
-        self.batch_size = 64
+        self.batch_size = 4
 
         # Model saving
         self.checkpoint_dir = "checkpoints"
-        self.checkpoint_fname = "chinese-checkers-training-{epoch:05d}.ckpt"
+        self.checkpoint_fname = "chinese-checkers-training-{epoch:04d}.ckpt"
 
         # Logging
         self.log_dir = "logs"
@@ -34,7 +34,7 @@ class Config:
 
         # Coefficient for L2 regularization
         self.l2_decay = 1e-4
-        self.lr_init = 2e-1
+        self.lr_init = 1e-1
         self.lr_multiplier = 0.5
         self.lr_steps = 3e3
 

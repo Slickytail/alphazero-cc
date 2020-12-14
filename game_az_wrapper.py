@@ -1,4 +1,5 @@
 import numpy as np
+from math import sqrt
 from checkers import CheckersGame, FULL_BOARD, Move
 from itertools import product
 from typing import List, Tuple
@@ -31,6 +32,8 @@ class Game(object):
 
     def terminal_value(self, player) -> float:
         # Might need to be in range [0, 1] instead...
+        if self.game.winner is None:
+            return 0.0
         return 1.0 if self.game.winner == player else -1.0
 
     def legal_actions(self) -> np.array:
@@ -83,7 +86,7 @@ class Game(object):
             # Whether each space is blocked or not
             _blocked_spaces,
             # Number of moves made so far
-            np.full(FULL_BOARD.shape, len(self.history)), # divided by something???
+            np.full(FULL_BOARD.shape, sqrt(len(self.history))/15.0), # divided by something???
             # the index of the current player
             np.full(FULL_BOARD.shape, turn),
             

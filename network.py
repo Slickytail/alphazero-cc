@@ -60,7 +60,8 @@ def make_network(config: Config) -> keras.Model:
         loss = [
             keras.losses.MeanSquaredError(name="value_loss"), # for value
             keras.losses.CategoricalCrossentropy(from_logits=True, name="policy_loss") # for policy
-        ]
+        ],
+        loss_weights = [2.0, 1.0]
     )
 
     return model

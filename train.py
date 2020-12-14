@@ -20,7 +20,7 @@ class ReplayBuffer:
             self.buffer.pop(0)
         self.buffer.append(game)
 
-    def __next__(self) -> Tuple[np.array, List[np.array]]:
+    def sample_batch(self) -> Tuple[np.array, List[np.array]]:
         """
         Sample a bunch of moves from the game history,
         with each state having equal probability (ie, rather than each game).
@@ -28,9 +28,9 @@ class ReplayBuffer:
         game_lengths = np.array([len(g.history) for g in self.buffer])
         games = self.rng.choice(
             self.buffer,
-            size=self.batch_size,
+            size = self.batch_size,
             p = game_lengths / sum(game_lengths))
-        game_positions = ((g, self.rng.randint(len(g.history))) for g in games)
+        game_positions = [(g, self.rng.integers(len(g.history))) for g in games]
         X = np.stack([g.make_image(i) for (g, i) in game_positions])
         V, P = zip(*[g.make_target(i) for (g, i) in game_positions])
         targets = [np.stack(V), np.stack(P)]
@@ -47,17 +47,21 @@ def train(config: Config):
     model = network.get_network(True, config)
     replays = ReplayBuffer(config)
 
+    def replays_generator():
+        while True:
+            b = replays.sample_batch()
+            (X, (V, P)) = b
+            print()
+            print((V, np.max(P), np.mean(P)))
+            print(model(X))
+            yield b
+
     # Make a directory to save callbacks in
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     checkpoint_callback = keras.callbacks.ModelCheckpoint(
             os.path.join(config.checkpoint_dir, config.checkpoint_fname),
             save_freq = config.checkpoint_interval
         )
-    # Also use Tensorboard
-    tensorboard_callback = keras.callbacks.TensorBoard(
-            log_dir=f"{config.log_dir}/fit/{config.timestamp}",
-        )
-
     # Single threaded version.
     for i in range(config.training_steps // config.batches_per_step):
         # Self-play some games
@@ -66,7 +70,7 @@ def train(config: Config):
             replays.save_game(self_play(model, config))
             progbar.update(g+1)
         # Might want to create a better training loop than this
-        model.fit(replays, callbacks = [checkpoint_callback, tensorboard_callback],
+        model.fit(replays_generator(), callbacks = [checkpoint_callback],
                 steps_per_epoch=config.batches_per_step,
                 initial_epoch = i, epochs = i+1)
 
