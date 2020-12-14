@@ -6,7 +6,7 @@ class Config:
         ### Self-Play
         self.search_batch_size = 8
         self.num_sampling_moves = 15
-        self.max_moves = 300
+        self.max_moves = 600
         self.num_simulations = 32
 
         # Root exploration noise
