@@ -33,11 +33,12 @@ def mcts(game: Game, network, config: Config):
     # Tell it who's playing
     root.to_play = game.to_play()
     # Fill in the probabilities of its children according to the current NN
+    root_legals = game.legal_actions()
     _, root_policy = evaluate(network,
             np.expand_dims(game.make_image(-1), 0),
-            np.expand_dims(game.legal_actions(), 0))
+            np.expand_dims(root_legals, 0))
     # Add noise to the priors first!
-    root_policy = add_exploration_noise(root_policy[0], config)
+    root_policy = add_exploration_noise(root_policy[0], config) * root_legals
     create_children(root, root_policy)
 
     # Do a number of playouts

@@ -17,12 +17,12 @@ class Config:
 
         ### Training
         self.training_steps = int(1e3)
-        self.games_per_step = 100
-        self.batches_per_step = 100
+        self.games_per_step = 20
+        self.batches_per_step = 80
 
         self.checkpoint_interval = int(1e2)
         self.window_size = int(1e3)
-        self.batch_size = 128
+        self.batch_size = 64
 
         # Model saving
         self.checkpoint_dir = "checkpoints"
