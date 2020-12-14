@@ -46,6 +46,7 @@ def mcts(game: Game, network, config: Config):
         actions = np.empty((config.search_batch_size, Game.NUM_ACTIONS), dtype=np.float32)
         images = np.empty((config.search_batch_size, *Game.INPUT_SHAPE), dtype=np.float32)
         search_paths = []
+        terminal = []
         
         # fill up a batch of searches.
         # this could be done in parallel, but because of the overhead of creating threads/processes
@@ -56,16 +57,16 @@ def mcts(game: Game, network, config: Config):
             scratch_game = game.clone()
             search_path = [node]
             # Randomly pick moves until we reach the end of the known search tree
-            while node.expanded():
+            while node.expanded() and not scratch_game.terminal():
                 action, node = select_child(node, config)
                 scratch_game.apply(action)
                 search_path.append(node)
-            # TODO: Add edge case: what if the game is won?
             node.to_play = scratch_game.to_play()
 
             images[i,:,:,:] = scratch_game.make_image(-1)
             actions[i,:] = scratch_game.legal_actions()
             search_paths.append(search_path)
+            terminal.append(scratch_game.terminal_value(node.to_play) if scratch_game.terminal else None)
        
         # Use the neural network to get suggested priors and value
         values, policies = evaluate(network, images, actions)
@@ -74,13 +75,15 @@ def mcts(game: Game, network, config: Config):
             # Add children to the node
             path = search_paths[i]
             node = path[-1]
-            create_children(node, policies[i])
+            value = terminal[i]
+            if terminal[i] is None:
+                create_children(node, policies[i])
+                value = values[i]
             # Backpropagate the value
             to_play = node.to_play
-            value = values[i]
-            for node in path:
-                node.value_sum += value if node.to_play == to_play else -value
-                node.visit_count += 1
+            for parent in path:
+                parent.value_sum += value if parent.to_play == to_play else -value
+                parent.visit_count += 1
     # Return the chosen action as well as the search tree.
     return select_action(game, root, config), root
 
@@ -128,11 +131,8 @@ def select_child(node: Node, config: Config) -> Tuple[Action, Node]:
     children = np.array([[action, child.visit_count, child.prior, child.value()]
             for (action, child) in node.children.items()])
     
-    # This computes the UCB constant as well as the numerator of the "underexplored" fraction
-    pb_c = (math.log((node.visit_count + config.pb_c_base + 1) /
-            config.pb_c_base) + config.pb_c_init) * math.sqrt(node.visit_count)
     # Next, we compute the prior -- filling in the denominator of the "underexplored" fraction, and multiplying by the prior value
-    prior_score = pb_c * children[:,2] / (children[:,1] + 1)
+    prior_score = math.sqrt(node.visit_count) * children[:,2] / (children[:,1] + 1)
     # Finally we get the ucb by adding this to the Q value
     ucb_score = prior_score + children[:,3]
     # And then we find the index which gives us the best score, and get the action name (ie, an int) 

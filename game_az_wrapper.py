@@ -35,7 +35,8 @@ class Game(object):
 
     def legal_actions(self) -> np.array:
         actions = np.zeros(Game.NUM_ACTIONS)
-        np.put(actions, [move_to_index[m] for m in self.game.get_legal(self.game.player_turn)], 1.0)
+        if not self.terminal():
+            np.put(actions, [move_to_index[m] for m in self.game.get_legal(self.game.player_turn)], 1.0)
         return actions
 
     def apply(self, action: int):

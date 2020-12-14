@@ -5,27 +5,23 @@ class Config:
     def __init__(self):
         ### Self-Play
         self.search_batch_size = 8
-        self.num_sampling_moves = 20
-        self.max_moves = 400
-        self.num_simulations = 80
+        self.num_sampling_moves = 15
+        self.max_moves = 200
+        self.num_simulations = 50
 
         # Root exploration noise
         # Figure out average number of legal moves in chinese checkers
         # then alpha = 10/n_moves
         self.root_alpha = 0.3
-        self.root_noise_scale = 0.25
-
-        # UCB
-        self.pb_c_base = 19652
-        self.pb_c_init = 1.25
+        self.root_noise_scale = 0.15
 
         ### Training
-        self.training_steps = int(7e4)
+        self.training_steps = int(1e3)
         self.games_per_step = 100
         self.batches_per_step = 100
 
-        self.checkpoint_interval = int(1e3)
-        self.window_size = int(1e4)
+        self.checkpoint_interval = int(1e2)
+        self.window_size = int(1e3)
         self.batch_size = 128
 
         # Model saving
