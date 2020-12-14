@@ -59,10 +59,12 @@ def train(config: Config):
         )
 
     # Single threaded version.
-    for i in range(config.training_steps):
+    for i in range(config.training_steps // config.batches_per_step):
         # Self-play some games
-        for _ in range(config.games_per_step):
+        progbar = keras.utils.Progbar(config.games_per_step)
+        for g in range(config.games_per_step):
             replays.save_game(self_play(model, config))
+            progbar.update(g+1)
         # Might want to create a better training loop than this
         model.fit(replays, callbacks = [checkpoint_callback, tensorboard_callback],
                 steps_per_epoch=config.batches_per_step,

@@ -7,7 +7,7 @@ class Config:
         self.search_batch_size = 8
         self.num_sampling_moves = 20
         self.max_moves = 400
-        self.num_simulations = 128
+        self.num_simulations = 80
 
         # Root exploration noise
         # Figure out average number of legal moves in chinese checkers
@@ -22,7 +22,7 @@ class Config:
         ### Training
         self.training_steps = int(7e4)
         self.games_per_step = 100
-        self.batches_per_step = 10
+        self.batches_per_step = 100
 
         self.checkpoint_interval = int(1e3)
         self.window_size = int(1e4)
