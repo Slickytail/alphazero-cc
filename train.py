@@ -9,16 +9,20 @@ from search import mcts
 import network
 
 class ReplayBuffer:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, outfile = None):
         self.window_size = config.window_size
         self.batch_size = config.batch_size
         self.rng = config.rng
         self.buffer = []
+        self.outfile = outfile
 
     def save_game(self, game: Game):
         if len(self.buffer) > self.window_size:
             self.buffer.pop(0)
         self.buffer.append(game)
+        # Log games to a file
+        if self.outfile is not None:
+            self.outfile.write("|".join(f"{start}->{end}" for (start, end) in game.history) + "\n")
 
     def sample_batch(self) -> Tuple[np.array, List[np.array]]:
         """
@@ -37,7 +41,7 @@ class ReplayBuffer:
         return X, targets
 
 
-def train(config: Config):
+def train(config: Config, outfile):
     """
     Run the training loop.
     This means doing a number of self-play games,
@@ -45,7 +49,7 @@ def train(config: Config):
     and then running a few batches of gradient descent on the network.
     """
     model = network.get_network(True, config)
-    replays = ReplayBuffer(config)
+    replays = ReplayBuffer(config, outfile)
 
     def replays_generator():
         while True:
@@ -78,5 +82,7 @@ def self_play(model: keras.layers.Layer, config: Config) -> Game:
         game.store_search_statistics(root)
     return game
 
-config = Config()
-train(config)
+if __name__ == '__main__':
+    config = Config()
+    with open(os.path.join(config.log_dir, "games.txt"), "a") as gamefile:
+        train(config, gamefile)
