@@ -25,8 +25,8 @@ class Config:
         self.batch_size = 64
 
         # Model saving
-        self.checkpoint_dir = "checkpoints"
-        self.checkpoint_fname = "chinese-checkers-training.ckpt"
+        self.checkpoint_dir = "models"
+        self.checkpoint_fname = "chinese-checkers"
 
         # Logging
         self.log_dir = "logs"

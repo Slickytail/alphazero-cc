@@ -93,11 +93,17 @@ def get_network(checkpoint: bool, config: Config) -> keras.Model:
     If epoch is None, create a new model.
     """
     # First we have to load the network architecture
-    model = make_network(config)
-    # If we're going to load saved weights
-    if checkpoint:
-        latest = tf.train.latest_checkpoint(config.checkpoint_dir)
-        if latest is not None:
-            model.load_weights(latest)
+    try:
+        assert checkpoint
+        model = keras.models.load_model(os.path.join(
+            config.checkpoint_dir,
+            config.checkpoint_fname))
+        print("Successfully loaded saved model.")
+    except AssertionError as _:
+        print("Creating new model.")
+        model = make_network(config)
+    except:
+        print("Failed to load the saved model, creating a new one.")
+        model = make_network(config)
     return model
 
