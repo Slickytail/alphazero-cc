@@ -26,7 +26,7 @@ class Config:
 
         # Model saving
         self.checkpoint_dir = "checkpoints"
-        self.checkpoint_fname = "chinese-checkers-training-{epoch:04d}.ckpt"
+        self.checkpoint_fname = "chinese-checkers-training.ckpt"
 
         # Logging
         self.log_dir = "logs"
