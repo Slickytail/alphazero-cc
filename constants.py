@@ -6,23 +6,23 @@ class Config:
         ### Self-Play
         self.search_batch_size = 8
         self.num_sampling_moves = 15
-        self.max_moves = 200
-        self.num_simulations = 16
+        self.max_moves = 300
+        self.num_simulations = 32
 
         # Root exploration noise
         # Figure out average number of legal moves in chinese checkers
         # then alpha = 10/n_moves
-        self.root_alpha = 0.3
+        self.root_alpha = 0.2
         self.root_noise_scale = 0.15
 
         ### Training
         self.training_steps = int(1e3)
-        self.games_per_step = 4
-        self.batches_per_step = 8
+        self.games_per_step = 30
+        self.batches_per_step = 16
 
         self.checkpoint_interval = 50
-        self.window_size = int(1e3)
-        self.batch_size = 4
+        self.window_size = 200
+        self.batch_size = 64
 
         # Model saving
         self.checkpoint_dir = "checkpoints"

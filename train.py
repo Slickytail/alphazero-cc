@@ -49,12 +49,7 @@ def train(config: Config):
 
     def replays_generator():
         while True:
-            b = replays.sample_batch()
-            (X, (V, P)) = b
-            print()
-            print((V, np.max(P), np.mean(P)))
-            print(model(X))
-            yield b
+            yield replays.sample_batch()
 
     # Make a directory to save callbacks in
     os.makedirs(config.checkpoint_dir, exist_ok=True)
