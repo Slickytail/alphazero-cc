@@ -46,10 +46,9 @@ def mcts(game: Game, network, config: Config):
     for _ in range(config.num_simulations // config.search_batch_size):
         # Initialize an empty stack of searches
         # Should be OK to change these to np.empty...
-        actions = np.zeros((config.search_batch_size, Game.NUM_ACTIONS), dtype=np.float32)
+        actions = np.ones((config.search_batch_size, Game.NUM_ACTIONS), dtype=np.float32)
         images = np.zeros((config.search_batch_size, *Game.INPUT_SHAPE), dtype=np.float32)
         search_paths = []
-        terminal = []
         
         # fill up a batch of searches.
         # this could be done in parallel, but because of the overhead of creating threads/processes
@@ -66,27 +65,30 @@ def mcts(game: Game, network, config: Config):
                 search_path.append(node)
             node.to_play = scratch_game.to_play()
 
-            images[i,:,:,:] = scratch_game.make_image(-1)
-            actions[i,:] = scratch_game.legal_actions()
-            search_paths.append(search_path)
-            terminal.append(scratch_game.terminal_value(node.to_play) if scratch_game.terminal else None)
-       
+            if scratch_game.terminal():
+                # Backpropagate right now
+                backpropagate(search_path, scratch_game.terminal_value(node.to_play))
+                # And mark that we're not going to backpropagate later.
+                search_paths.append(None)
+                # We can leave the image, we don't care about it
+                # And we can leave the actions as ones -- nothing is going to be done with it
+            else:
+                images[i,:,:,:] = scratch_game.make_image(-1)
+                actions[i,:] = scratch_game.legal_actions()
+                search_paths.append(search_path)
         # Use the neural network to get suggested priors and value
         values, policies = evaluate(network, images, actions)
         # Store the NN's estimation in the search tree
         for i in range(config.search_batch_size):
             # Add children to the node
             path = search_paths[i]
+            if path is None:
+                continue
             node = path[-1]
-            value = terminal[i]
-            if terminal[i] is None:
-                create_children(node, policies[i])
-                value = values[i]
+            value = values[i]
+            create_children(node, policies[i])
             # Backpropagate the value
-            to_play = node.to_play
-            for parent in path:
-                parent.value_sum += value if parent.to_play == to_play else -value
-                parent.visit_count += 1
+            backpropagate(path, value)
     # Return the chosen action as well as the search tree.
     return select_action(game, root, config), root
 
@@ -109,6 +111,12 @@ def create_children(node, priors):
         # p is only set to 0 if the move is actually illegal
         if p != 0.0:
             node.children[a] = Node(p)
+
+def backpropagate(path, value):
+    to_play = path[-1].to_play
+    for parent in path:
+        parent.value_sum += value if parent.to_play == to_play else -value
+        parent.visit_count += 1
 
 def add_exploration_noise(priors: np.array, config: Config) -> np.array:
     """
