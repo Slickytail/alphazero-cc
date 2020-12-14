@@ -56,7 +56,6 @@ def train(config: Config):
     # Also use Tensorboard
     tensorboard_callback = keras.callbacks.TensorBoard(
             log_dir=f"{config.log_dir}/fit/{config.timestamp}",
-            histogram_freq=1
         )
 
     # Single threaded version.
