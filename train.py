@@ -20,7 +20,7 @@ class ReplayBuffer:
             self.buffer.pop(0)
         self.buffer.append(game)
 
-    def __next__(self):
+    def __next__(self) -> Tuple[np.array, List[np.array]]:
         """
         Sample a bunch of moves from the game history,
         with each state having equal probability (ie, rather than each game).
@@ -44,11 +44,11 @@ def train(config: Config):
     saving the states of those games,
     and then running a few batches of gradient descent on the network.
     """
-    model = network.get_network(config)
+    model = network.get_network(True, config)
     replays = ReplayBuffer(config)
 
     # Make a directory to save callbacks in
-    os.makedirs(config.checkpoint_dir, exists_ok=True)
+    os.makedirs(config.checkpoint_dir, exist_ok=True)
     checkpoint_callback = keras.callbacks.ModelCheckpoint(
         os.path.join(config.checkpoint_dir, config.checkpoint_fname),
         save_freq = config.checkpoint_interval
@@ -57,14 +57,19 @@ def train(config: Config):
     for i in range(config.training_steps):
         # Self-play some games
         for _ in range(config.games_per_step):
-            replays.save_game(self_play(network, config))
-        model.fit(replays, steps_per_epoch=config.batches_per_step,
-                callbacks = [checkpoint_callback])
+            replays.save_game(self_play(model, config))
+        # Might want to create a better training loop than this
+        model.fit(replays, callbacks = [checkpoint_callback],
+                steps_per_epoch=config.batches_per_step,
+                initial_epoch = i, epochs = i+1)
 
-def self_play(network, config: Config) -> Game:
+def self_play(model: keras.layers.Layer, config: Config) -> Game:
     game = Game()
     while not game.terminal() and len(game.history) < config.max_moves:
-        action, root = mcts(game, network, config)
+        action, root = mcts(game, model, config)
         game.apply(action)
         game.store_search_statistics(root)
     return game
+
+config = Config()
+train(config)

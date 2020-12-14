@@ -16,10 +16,15 @@ def make_network(config: Config) -> keras.Model:
     """
     tf.random.set_seed(config.seed)
     # Maybe we set dtype here?
-    planes = keras.Input(shape=Game.INPUT_SHAPE)
+    planes = keras.Input(shape=Game.INPUT_SHAPE, name="game_state")
     # AlphaZero uses 18 residual blocks.
-    # We'll use six.
-    x = residual_block(planes, 64, reg=config.l2_decay)
+    # We'll use five.
+    # First, we have to have an initial non-residual layer to change the number of filters. 
+    x = layers.Conv2D(64, kernel_size = (1, 1), padding='same',
+            kernel_regularizer = L2(config.l2_decay))(planes)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU()(x)
+
     for _ in range(5):
         x = residual_block(x, 64, reg=config.l2_decay)
     
@@ -29,7 +34,7 @@ def make_network(config: Config) -> keras.Model:
     p = layers.BatchNormalization()(p)
     p = layers.LeakyReLU()(p)
     p = layers.Flatten()(p)
-    p = layers.Dense(Game.NUM_ACTIONS,
+    p = layers.Dense(Game.NUM_ACTIONS, name='policy',
             kernel_regularizer = L2(config.l2_decay))(p)
 
     # Value head
@@ -41,11 +46,10 @@ def make_network(config: Config) -> keras.Model:
     v = layers.Dense(64,
             kernel_regularizer = L2(config.l2_decay))(v)
     v = layers.LeakyReLU()(v)
-    v = layers.Dense(1,
+    v = layers.Dense(1, activation = 'tanh', name='value',
             kernel_regularizer = L2(config.l2_decay))(v)
-    v = keras.activations.tanh(v)
 
-    model = keras.Model(inputs = planes, output = [v, p])
+    model = keras.Model(inputs = planes, outputs = [v, p])
     model.compile(
         optimizer = keras.optimizers.Adam(
             keras.optimizers.schedules.ExponentialDecay(
@@ -53,7 +57,7 @@ def make_network(config: Config) -> keras.Model:
                 config.lr_steps,
                 config.lr_multiplier)
             ),
-        losses = [
+        loss = [
             keras.losses.MeanSquaredError(name="value_loss"), # for value
             keras.losses.CategoricalCrossentropy(from_logits=True, name="policy_loss") # for policy
         ]
@@ -92,6 +96,7 @@ def get_network(checkpoint: bool, config: Config) -> keras.Model:
     # If we're going to load saved weights
     if checkpoint:
         latest = tf.train.latest_checkpoint(config.checkpoint_dir)
-        model.load_weights(latest)
+        if latest is not None:
+            model.load_weights(latest)
     return model
 

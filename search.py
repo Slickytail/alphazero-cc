@@ -69,8 +69,12 @@ def evaluate(node: Node, game: Game, evaluator) -> float:
     Use a neural network evaluator to compute a suggested policy at a node.
     """
     # Let's make sure that passing a negative int to game.make_image works
-    value, policy_logits = evaluator.predict(game.make_image(-1))
-
+    value, policy_logits = evaluator(np.stack([game.make_image(-1)]), training=False)
+    # These are both tensors with first dimension = batches
+    # So we want to take the first element of each
+    # Plus, value will have shape (B, 1) so we want [0, 0]
+    value = value[0,0]
+    policy_logits = policy_logits[0,:]
     # Record the policy prediction in the children
     node.to_play = game.to_play()
     # Zero out the illegal actions
@@ -104,8 +108,8 @@ def select_child(node: Node, config: Config) -> Tuple[Action, Node]:
     # This will let us quickly do operations over it
 
     # This relies on the fact that action == int
-    children = np.array([action, child.visit_count, child.prior, child.value()]
-            for (action, child) in node.children.items())
+    children = np.array([[action, child.visit_count, child.prior, child.value()]
+            for (action, child) in node.children.items()])
     
     # This computes the UCB constant as well as the numerator of the "underexplored" fraction
     pb_c = (math.log((node.visit_count + config.pb_c_base + 1) /

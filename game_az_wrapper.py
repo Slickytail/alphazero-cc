@@ -1,4 +1,3 @@
-from search import Node
 import numpy as np
 from checkers import CheckersGame, FULL_BOARD, Move
 from itertools import product
@@ -49,10 +48,10 @@ class Game(object):
         # Trust that the move was validated already
         self.game.move(*move, validate=False)
 
-    def clone(self) -> Game:
+    def clone(self):
         return Game(list(self.history), self.game.clone())
 
-    def store_search_statistics(self, root: Node):
+    def store_search_statistics(self, root):
         total_visits = sum(child.visit_count for child in root.children.values())
         visit_probs = np.zeros(self.NUM_ACTIONS)
         for (action, child) in root.children.items():
