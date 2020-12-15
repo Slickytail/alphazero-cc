@@ -37,6 +37,8 @@ class Game(object):
         return 1.0 if self.winner == player else -1.0
 
     def legal_actions(self) -> np.array:
+        if self.terminal():
+            return np.zeros_like(self.board)
         return (self.board[0] == 0).astype(np.float)
 
     def apply(self, action: int):
@@ -52,7 +54,7 @@ class Game(object):
             self.turn = self.turn % 2 + 1
 
     def unapply(self, action: int, board):
-        slot = BOARD_H - np.argwhere(board[::-1,action] == 0)[0,0]
+        slot = np.argwhere(board[:,action] != 0)[0,0]
         board[slot, action] = 0
 
     def clone(self):
@@ -69,7 +71,10 @@ class Game(object):
         board = self.board.copy()
         turn = self.turn
 
-        for col in self.history[state_index::-1]:
+        if state_index < 0:
+            state_index += len(self.history) + 1
+            # state index -1 means last state.
+        for col in reversed(self.history[state_index:]):
             self.unapply(col, board)
             turn = (turn + 1) % 2
         opponent = (turn + 1) % 2
