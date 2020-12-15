@@ -4,29 +4,28 @@ import datetime
 class Config:
     def __init__(self):
         ### Self-Play
-        self.search_batch_size = 8
+        self.search_batch_size = 4
         self.num_sampling_moves = 15
-        self.max_moves = 600
-        self.num_simulations = 32
+        self.num_simulations = 64
 
         # Root exploration noise
         # Figure out average number of legal moves in chinese checkers
         # then alpha = 10/n_moves
-        self.root_alpha = 0.2
+        self.root_alpha = 1
         self.root_noise_scale = 0.15
 
         ### Training
-        self.training_steps = int(1e3)
+        self.training_steps = int(1e4)
         self.games_per_step = 30
         self.batches_per_step = 16
 
         self.checkpoint_interval = 50
         self.window_size = 200
-        self.batch_size = 64
+        self.batch_size = 128
 
         # Model saving
         self.checkpoint_dir = "models"
-        self.checkpoint_fname = "chinese-checkers"
+        self.checkpoint_fname = "connect-four"
 
         # Logging
         self.log_dir = "logs"

@@ -2,7 +2,7 @@ from typing import List, Tuple, Dict
 import numpy as np
 import math
 
-from game_az_wrapper import Game, Action
+from game import Game
 from constants import Config
 from util import softmax, softmask
 
@@ -15,7 +15,7 @@ class Node(object):
         self.to_play = -1
         self.prior = prior
         self.value_sum = 0.0
-        self.children: Dict[Action, Node] = {}
+        self.children: Dict[int, Node] = {}
 
     def expanded(self) -> bool:
         return len(self.children) > 0
@@ -46,8 +46,8 @@ def mcts(game: Game, network, config: Config):
     for _ in range(config.num_simulations // config.search_batch_size):
         # Initialize an empty stack of searches
         # Should be OK to change these to np.empty...
-        actions = np.ones((config.search_batch_size, Game.NUM_ACTIONS), dtype=np.float32)
-        images = np.zeros((config.search_batch_size, *Game.INPUT_SHAPE), dtype=np.float32)
+        actions = np.ones((config.search_batch_size, Game.NUM_ACTIONS), dtype=np.float)
+        images = np.zeros((config.search_batch_size, *Game.INPUT_SHAPE), dtype=np.float)
         search_paths = []
         
         # fill up a batch of searches.
@@ -60,7 +60,7 @@ def mcts(game: Game, network, config: Config):
             search_path = [node]
             # Randomly pick moves until we reach the end of the known search tree
             while node.expanded() and not scratch_game.terminal():
-                action, node = select_child(node, config)
+                action, node = select_child(node)
                 scratch_game.apply(action)
                 search_path.append(node)
             node.to_play = scratch_game.to_play()
@@ -126,7 +126,7 @@ def add_exploration_noise(priors: np.array, config: Config) -> np.array:
     frac = config.root_noise_scale
     return priors * (1 - frac) + noise * frac
 
-def select_child(node: Node, config: Config) -> Tuple[Action, Node]:
+def select_child(node: Node) -> Tuple[int, Node]:
     """
     Compute UCB scores for a node's children and return the best one.
     """
@@ -142,11 +142,11 @@ def select_child(node: Node, config: Config) -> Tuple[Action, Node]:
     # Finally we get the ucb by adding this to the Q value
     ucb_score = prior_score + children[:,3]
     # And then we find the index which gives us the best score, and get the action name (ie, an int) 
-    best_action = Action(children[np.argmax(ucb_score),0])
+    best_action = int(children[np.argmax(ucb_score),0])
     return (best_action, node.children[best_action])
 
 
-def select_action(game: Game, root: Node, config: Config) -> Action:
+def select_action(game: Game, root: Node, config: Config) -> int:
     """
     Choose an action to take based on search statistics.
     Chooses proportionally in the beginning of the game,

@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 from constants import Config
-from game_az_wrapper import Game
+from game import Game
 from search import mcts
 import network
 
@@ -22,7 +22,7 @@ class ReplayBuffer:
         self.buffer.append(game)
         # Log games to a file
         if self.outfile is not None:
-            self.outfile.write("|".join(f"{start}->{end}" for (start, end) in game.history) + "\n")
+            self.outfile.write("|".join(str(col) for col in game.history) + "\n")
 
     def sample_batch(self) -> Tuple[np.array, List[np.array]]:
         """
@@ -61,6 +61,7 @@ def train(config: Config, outfile):
             os.path.join(config.checkpoint_dir, config.checkpoint_fname),
             save_freq = config.checkpoint_interval
         )
+
     # Single threaded version.
     for i in range(config.training_steps // config.batches_per_step):
         # Self-play some games
@@ -76,7 +77,7 @@ def train(config: Config, outfile):
 
 def self_play(model: keras.layers.Layer, config: Config) -> Game:
     game = Game()
-    while not game.terminal() and len(game.history) < config.max_moves:
+    while not game.terminal():
         action, root = mcts(game, model, config)
         game.apply(action)
         game.store_search_statistics(root)

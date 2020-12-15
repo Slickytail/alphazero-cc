@@ -7,7 +7,7 @@ import os
 
 # the Game class there will tell us the action space size
 # and the size of the network's input
-from game_az_wrapper import Game
+from game import Game
 from constants import Config
 
 def make_network(config: Config) -> keras.Model:
@@ -18,15 +18,15 @@ def make_network(config: Config) -> keras.Model:
     # Maybe we set dtype here?
     planes = keras.Input(shape=Game.INPUT_SHAPE, name="game_state")
     # AlphaZero uses 18 residual blocks.
-    # We'll use five.
+    # We'll use two
     # First, we have to have an initial non-residual layer to change the number of filters. 
-    x = layers.Conv2D(64, kernel_size = (1, 1), padding='same',
+    x = layers.Conv2D(16, kernel_size = (1, 1), padding='same',
             kernel_regularizer = L2(config.l2_decay))(planes)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
 
-    for _ in range(5):
-        x = residual_block(x, 64, reg=config.l2_decay)
+    for _ in range(2):
+        x = residual_block(x, 16, reg=config.l2_decay)
     
     # Policy Head
     p = layers.Conv2D(2, kernel_size=(1, 1), padding='same',
@@ -43,7 +43,7 @@ def make_network(config: Config) -> keras.Model:
     v = layers.BatchNormalization()(v)
     v = layers.LeakyReLU()(v)
     v = layers.Flatten()(v)
-    v = layers.Dense(64,
+    v = layers.Dense(16,
             kernel_regularizer = L2(config.l2_decay))(v)
     v = layers.LeakyReLU()(v)
     v = layers.Dense(1, activation = 'tanh', name='value',
