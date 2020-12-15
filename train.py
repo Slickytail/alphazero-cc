@@ -57,13 +57,11 @@ def train(config: Config, outfile):
 
     # Make a directory to save callbacks in
     os.makedirs(config.checkpoint_dir, exist_ok=True)
-    checkpoint_callback = keras.callbacks.ModelCheckpoint(
-            os.path.join(config.checkpoint_dir, config.checkpoint_fname),
-            save_freq = config.checkpoint_interval
-        )
 
     # Single threaded version.
     for i in range(config.training_steps // config.batches_per_step):
+        if (i + 1) % config.checkpoint_interval == 0:
+            model.save(os.path.join(config.checkpoint_dir, config.checkpoint_fname))
         # Self-play some games
         progbar = keras.utils.Progbar(config.games_per_step)
         progbar.update(0)
@@ -71,7 +69,7 @@ def train(config: Config, outfile):
             replays.save_game(self_play(model, config))
             progbar.update(g+1)
         # Might want to create a better training loop than this
-        model.fit(replays_generator(), callbacks = [checkpoint_callback],
+        model.fit(replays_generator(),
                 steps_per_epoch=config.batches_per_step,
                 initial_epoch = i, epochs = i+1)
 
