@@ -76,8 +76,8 @@ class Game(object):
             # state index -1 means last state.
         for col in reversed(self.history[state_index:]):
             self.unapply(col, board)
-            turn = (turn + 1) % 2
-        opponent = (turn + 1) % 2
+            turn = turn % 2 + 1
+        opponent = turn % 2 + 1
         # Now board is the state of the board at that index.
         # 3 layers for tile state (empty, player piece, opponent piece)
         planes = np.array([
