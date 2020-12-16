@@ -18,14 +18,14 @@ def make_network(config: Config) -> keras.Model:
     # Maybe we set dtype here?
     planes = keras.Input(shape=Game.INPUT_SHAPE, name="game_state")
     # AlphaZero uses 18 residual blocks.
-    # We'll use two
+    # We'll use three
     # First, we have to have an initial non-residual layer to change the number of filters. 
     x = layers.Conv2D(16, kernel_size = (1, 1), padding='same',
             kernel_regularizer = L2(config.l2_decay))(planes)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
 
-    for _ in range(2):
+    for _ in range(3):
         x = residual_block(x, 16, reg=config.l2_decay)
     
     # Policy Head

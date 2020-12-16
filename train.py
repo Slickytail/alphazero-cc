@@ -55,13 +55,15 @@ def train(config: Config, outfile):
         while True:
             yield replays.sample_batch()
 
-    # Make a directory to save callbacks in
+    # Make a directory to save checkpoints in
     os.makedirs(config.checkpoint_dir, exist_ok=True)
 
     # Single threaded version.
     for i in range(config.training_steps // config.batches_per_step):
+        # Save checkpoint
         if (i + 1) % config.checkpoint_interval == 0:
             model.save(os.path.join(config.checkpoint_dir, config.checkpoint_fname))
+
         # Self-play some games
         progbar = keras.utils.Progbar(config.games_per_step)
         progbar.update(0)

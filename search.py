@@ -4,7 +4,7 @@ import math
 
 from game import Game
 from constants import Config
-from util import softmax, softmask
+from scipy.special import softmax
 
 class Node(object):
     """
@@ -160,6 +160,10 @@ def select_action(game: Game, root: Node, config: Config) -> int:
     else:
         _, action = max(visit_counts)
     return action
+
+def softmask(x, mask, axis=None):
+    x = softmax(x * mask, axis=axis) * mask
+    return x / np.sum(x, axis=axis, keepdims=True)
 
 # Note to self: exploiting symmetry (ie, augmenting training data by flipping) will make training much faster when measured in real-time
 # Need to find out: does AlphaZero flip the board to be from the current player's position?

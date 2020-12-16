@@ -12,16 +12,16 @@ class Config:
         # Figure out average number of legal moves in chinese checkers
         # then alpha = 10/n_moves
         self.root_alpha = 1
-        self.root_noise_scale = 0.15
+        self.root_noise_scale = 0.1
 
         ### Training
         self.training_steps = int(1e4)
-        self.games_per_step = 50
-        self.batches_per_step = 16
+        self.games_per_step = 30
+        self.batches_per_step = 32
 
         self.checkpoint_interval = 10
-        self.window_size = 1000
-        self.batch_size = 64
+        self.window_size = 150
+        self.batch_size = 32
 
         # Model saving
         self.checkpoint_dir = "models"
@@ -33,7 +33,7 @@ class Config:
 
         # Coefficient for L2 regularization
         self.l2_decay = 1e-4
-        self.lr_init = 1e-1
+        self.lr_init = 3e-2
         self.lr_multiplier = 0.5
         self.lr_steps = 3e3
 

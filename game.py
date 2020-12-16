@@ -29,7 +29,7 @@ class Game(object):
                 self.apply(move)
 
     def terminal(self) -> bool:
-        return self.winner > 0
+        return self.winner > 0 or (np.sum(self.board[0] == 0) == 0)
 
     def terminal_value(self, player) -> float:
         if self.winner == 0:
@@ -38,7 +38,7 @@ class Game(object):
 
     def legal_actions(self) -> np.array:
         if self.terminal():
-            return np.zeros_like(self.board)
+            return np.zeros_like(self.board[0])
         return (self.board[0] == 0).astype(np.float)
 
     def apply(self, action: int):
@@ -50,8 +50,7 @@ class Game(object):
         # Check for winner
         if has_won(self.board, self.turn):
             self.winner = self.turn
-        else:
-            self.turn = self.turn % 2 + 1
+        self.turn = self.turn % 2 + 1
 
     def unapply(self, action: int, board):
         slot = np.argwhere(board[:,action] != 0)[0,0]
