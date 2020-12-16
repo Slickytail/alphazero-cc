@@ -20,6 +20,7 @@ class Node(object):
     def expanded(self) -> bool:
         return len(self.children) > 0
 
+    # This is the value for the player whose turn it is at this state.
     def value(self) -> float:
         if self.visit_count == 0:
             return 0.0
@@ -101,7 +102,7 @@ def evaluate(evaluator, images, actions):
     # Zero out the illegal actions and then softmax
     policy = softmask(policy_logits, actions, 1)
     # Return the values and policies
-    return value[:,0], policy
+    return value[:,0].numpy(), policy
 
 def create_children(node, priors):
     """
@@ -134,7 +135,7 @@ def select_child(node: Node) -> Tuple[int, Node]:
     # This will let us quickly do operations over it
 
     # This relies on the fact that action == int
-    children = np.array([[action, child.visit_count, child.prior, child.value()]
+    children = np.array([[action, child.visit_count, child.prior, -child.value()]
             for (action, child) in node.children.items()])
     
     # Next, we compute the prior -- filling in the denominator of the "underexplored" fraction, and multiplying by the prior value
@@ -165,6 +166,3 @@ def softmask(x, mask, axis=None):
     x = softmax(x * mask, axis=axis) * mask
     return x / np.sum(x, axis=axis, keepdims=True)
 
-# Note to self: exploiting symmetry (ie, augmenting training data by flipping) will make training much faster when measured in real-time
-# Need to find out: does AlphaZero flip the board to be from the current player's position?
-np.seterr(all='raise')
